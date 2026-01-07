@@ -156,7 +156,7 @@ export default function Home() {
                 {
                   title: "Barboterapia",
                   description:
-                    "Toalha quente, hidratação, lâmina precisa e massagem relaxante.",
+                    "Toalha quente, hidratação, lâmina precisa",
                 },
                 {
                   title: "Pacote Europa",
