@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Logo Barbearia Europa">
+  <rect width="160" height="160" fill="#0b0b0b"/>
+  <g fill="#ffffff" transform="translate(80 52)">
+    <circle r="22" fill="#101010" stroke="#ffffff" stroke-width="2" />
+    <path d="M0-18l3.7 7.6 8.4 1.2-6.1 5.9 1.4 8.4L0 1.6l-7.4 3.9 1.4-8.4-6.1-5.9 8.4-1.2z"/>
+    <path d="M-22 4l2.3 4.7 5.2.8-3.8 3.7.9 5.3-4.6-2.4-4.6 2.4.9-5.3-3.8-3.7 5.2-.8z" transform="scale(0.6) translate(-36 6)"/>
+    <path d="M22 4l2.3 4.7 5.2.8-3.8 3.7.9 5.3-4.6-2.4-4.6 2.4.9-5.3-3.8-3.7 5.2-.8z" transform="scale(0.6) translate(36 6)"/>
+  </g>
+  <g fill="#ffffff" font-family="'Montserrat', 'Helvetica Neue', Arial, sans-serif" text-anchor="middle">
+    <text x="80" y="118" font-size="22" font-weight="700" letter-spacing="2">EUROPA</text>
+    <text x="80" y="138" font-size="10" letter-spacing="3">BARBEARIA</text>
+  </g>
+</svg>
