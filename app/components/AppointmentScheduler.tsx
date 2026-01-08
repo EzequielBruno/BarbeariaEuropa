@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-
+import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from "react";
 import type { AvailabilityResult } from "@/lib/appointments";
 
 const todayIso = () => {
@@ -17,25 +16,19 @@ const formatDate = (value: string) => {
   return `${day}/${month}/${year}`;
 };
 
-const buildAvailabilityUrl = (
-  date: string,
-  serviceId?: string,
-  barberId?: string
-) => {
+const buildAvailabilityUrl = (date: string, serviceId?: string, barberId?: string) => {
   const params = new URLSearchParams({ date });
-  if (serviceId) {
-    params.set("serviceId", serviceId);
-  }
-  if (barberId) {
-    params.set("barberId", barberId);
-  }
+  if (serviceId) params.set("serviceId", serviceId);
+  if (barberId) params.set("barberId", barberId);
   return `/api/appointments/availability?${params.toString()}`;
 };
 
+type StatusState =
+  | { type: "success" | "error" | "info"; message: string }
+  | null;
+
 export default function AppointmentScheduler() {
-  const [availability, setAvailability] = useState<AvailabilityResult | null>(
-    null
-  );
+  const [availability, setAvailability] = useState<AvailabilityResult | null>(null);
   const [selectedDate, setSelectedDate] = useState(todayIso());
   const [serviceId, setServiceId] = useState<string>("");
   const [barberId, setBarberId] = useState<string>("");
@@ -44,75 +37,90 @@ export default function AppointmentScheduler() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
-  const [status, setStatus] = useState<{
-    type: "success" | "error" | "info";
-    message: string;
-  } | null>(null);
+  const [status, setStatus] = useState<StatusState>(null);
   const [loading, setLoading] = useState(false);
+  const [openTimesModal, setOpenTimesModal] = useState(false);
 
   useEffect(() => {
     const fetchAvailability = async () => {
-      const response = await fetch(
-        buildAvailabilityUrl(selectedDate, serviceId, barberId)
-      );
-      if (!response.ok) {
+      try {
+        const res = await fetch(buildAvailabilityUrl(selectedDate, serviceId, barberId));
+        if (!res.ok) {
+          setAvailability(null);
+          return;
+        }
+
+        const data = (await res.json()) as AvailabilityResult;
+        setAvailability(data);
+
+        // Define defaults somente quando ainda não há seleção
+        if (data.services.length && !serviceId) setServiceId(data.services[0].id);
+        if (data.barbers.length && !barberId) setBarberId(data.barbers[0].id);
+      } catch {
         setAvailability(null);
-        return;
-      }
-      const data = (await response.json()) as AvailabilityResult;
-      setAvailability(data);
-      if (data.services.length && !serviceId) {
-        setServiceId(data.services[0].id);
-      }
-      if (data.barbers.length && !barberId) {
-        setBarberId(data.barbers[0].id);
       }
     };
 
-    fetchAvailability().catch(() => {
-      setAvailability(null);
-    });
+    fetchAvailability();
   }, [selectedDate, serviceId, barberId]);
 
   const times = useMemo(() => availability?.times ?? [], [availability]);
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const confirmSubmit = async () => {
     setStatus(null);
     setLoading(true);
 
-    const response = await fetch("/api/appointments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerName,
-        phone,
-        email,
-        serviceId,
-        barberId,
-        date: selectedDate,
-        time: selectedTime,
-        notes,
-      }),
-    });
+    try {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName,
+          phone,
+          email,
+          serviceId,
+          barberId,
+          date: selectedDate,
+          time: selectedTime,
+          notes,
+        }),
+      });
 
-    const data = await response.json();
+      const data = await res.json();
 
-    if (!response.ok) {
-      setStatus({ type: "error", message: data.error ?? "Erro inesperado." });
+      if (!res.ok) {
+        setStatus({ type: "error", message: data?.error ?? "Erro inesperado." });
+        return;
+      }
+
+      setStatus({
+        type: "success",
+        message: `Agendamento confirmado para ${formatDate(selectedDate)} às ${selectedTime}.`,
+      });
+
+      setSelectedTime("");
+      setNotes("");
+      setOpenTimesModal(false);
+    } catch {
+      setStatus({ type: "error", message: "Erro ao confirmar agendamento." });
+    } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAgendar = (e?: MouseEvent<HTMLButtonElement> | FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
+    setStatus(null);
+
+    if (!customerName || !phone || !serviceId || !barberId || !selectedDate) {
+      setStatus({
+        type: "info",
+        message: "Preencha nome, WhatsApp, serviço, barbeiro e data antes de escolher o horário.",
+      });
       return;
     }
 
-    setStatus({
-      type: "success",
-      message: `Agendamento confirmado para ${formatDate(
-        selectedDate
-      )} às ${selectedTime}.`,
-    });
-    setSelectedTime("");
-    setNotes("");
-    setLoading(false);
+    setOpenTimesModal(true);
   };
 
   const businessHoursLabel = availability
@@ -120,39 +128,35 @@ export default function AppointmentScheduler() {
     : "09:00 às 19:00";
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+    <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
       <div className="space-y-6 rounded-3xl border border-white/10 bg-black/40 p-6 sm:p-8">
         <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">
-            Agenda online
-          </p>
-          <h3 className="text-2xl font-semibold md:text-3xl">
-            Reserve seu horário em poucos passos
-          </h3>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Agenda online</p>
+          <h3 className="text-2xl font-semibold md:text-3xl">Reserve seu horário em poucos passos</h3>
           <p className="text-sm text-white/70">
-            Horário de atendimento: {businessHoursLabel}. Pausa para almoço das
-            12:00 às 13:00.
+            Horário de atendimento: {businessHoursLabel}. Pausa para almoço das 12:00 às 13:00.
           </p>
         </div>
 
-        <form className="space-y-5" onSubmit={handleSubmit}>
+        <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2 text-sm">
               <span className="text-white/70">Nome completo</span>
               <input
                 className="w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm text-white outline-none transition focus:border-[#f2c95a]"
                 value={customerName}
-                onChange={(event) => setCustomerName(event.target.value)}
+                onChange={(ev) => setCustomerName(ev.target.value)}
                 placeholder="Seu nome"
                 required
               />
             </label>
+
             <label className="space-y-2 text-sm">
               <span className="text-white/70">WhatsApp</span>
               <input
                 className="w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm text-white outline-none transition focus:border-[#f2c95a]"
                 value={phone}
-                onChange={(event) => setPhone(event.target.value)}
+                onChange={(ev) => setPhone(ev.target.value)}
                 placeholder="(00) 00000-0000"
                 required
               />
@@ -165,25 +169,26 @@ export default function AppointmentScheduler() {
               <input
                 className="w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm text-white outline-none transition focus:border-[#f2c95a]"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(ev) => setEmail(ev.target.value)}
                 placeholder="seuemail@email.com"
                 type="email"
               />
             </label>
+
             <label className="space-y-2 text-sm">
               <span className="text-white/70">Serviço</span>
               <select
                 className="w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm text-white outline-none transition focus:border-[#f2c95a]"
                 value={serviceId}
-                onChange={(event) => {
-                  setServiceId(event.target.value);
+                onChange={(ev) => {
+                  setServiceId(ev.target.value);
                   setSelectedTime("");
                 }}
                 required
               >
-                {availability?.services.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name} · {service.price}
+                {availability?.services.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} · {s.price}
                   </option>
                 ))}
               </select>
@@ -196,27 +201,28 @@ export default function AppointmentScheduler() {
               <select
                 className="w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm text-white outline-none transition focus:border-[#f2c95a]"
                 value={barberId}
-                onChange={(event) => {
-                  setBarberId(event.target.value);
+                onChange={(ev) => {
+                  setBarberId(ev.target.value);
                   setSelectedTime("");
                 }}
                 required
               >
-                {availability?.barbers.map((barber) => (
-                  <option key={barber.id} value={barber.id}>
-                    {barber.name} · {barber.specialty}
+                {availability?.barbers.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} · {b.specialty}
                   </option>
                 ))}
               </select>
             </label>
+
             <label className="space-y-2 text-sm">
               <span className="text-white/70">Data</span>
               <input
                 className="w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm text-white outline-none transition focus:border-[#f2c95a]"
                 type="date"
                 value={selectedDate}
-                onChange={(event) => {
-                  setSelectedDate(event.target.value);
+                onChange={(ev) => {
+                  setSelectedDate(ev.target.value);
                   setSelectedTime("");
                 }}
                 min={todayIso()}
@@ -230,7 +236,7 @@ export default function AppointmentScheduler() {
             <textarea
               className="min-h-[110px] w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm text-white outline-none transition focus:border-[#f2c95a]"
               value={notes}
-              onChange={(event) => setNotes(event.target.value)}
+              onChange={(ev) => setNotes(ev.target.value)}
               placeholder="Preferências, referência ou observações."
             />
           </label>
@@ -250,73 +256,120 @@ export default function AppointmentScheduler() {
           )}
 
           <button
+            type="button"
+            onClick={handleAgendar}
+            disabled={loading}
             className="w-full rounded-full bg-[#f2c95a] px-6 py-3 text-center text-sm font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={loading || !selectedTime}
-            type="submit"
           >
-            {loading ? "Confirmando..." : "Confirmar agendamento"}
+            Agendar
           </button>
         </form>
       </div>
 
       <div className="space-y-6 rounded-3xl border border-white/10 bg-black/40 p-6 sm:p-8">
         <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">
-            Horários disponíveis
-          </p>
-          <h3 className="text-2xl font-semibold md:text-3xl">
-            Escolha o melhor horário para você
-          </h3>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Horários disponíveis</p>
+          <h3 className="text-2xl font-semibold md:text-3xl">Escolha o melhor horário para você</h3>
           <p className="text-sm text-white/70">
-            {availability
-              ? `Disponibilidade para ${formatDate(availability.date)}.`
-              : "Selecione uma data para visualizar horários."}
+            {availability ? `Disponibilidade para ${formatDate(availability.date)}.` : "Selecione uma data para visualizar horários."}
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-          {times.length === 0 ? (
-            <span className="col-span-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white/70">
-              Não há horários disponíveis para esta data.
-            </span>
-          ) : (
-            times.map((time) => (
-              <button
-                key={time}
-                className={`rounded-2xl border px-3 py-2 text-sm transition ${
-                  selectedTime === time
-                    ? "border-[#f2c95a] bg-[#f2c95a] text-black"
-                    : "border-white/10 bg-black/40 text-white/80 hover:border-[#f2c95a]/50"
-                }`}
-                onClick={() => setSelectedTime(time)}
-                type="button"
-              >
-                {time}
-              </button>
-            ))
-          )}
+        <div className="mt-2">
+          <div className="rounded-2xl border border-white/10 bg-black/40 px-4 py-6 text-sm text-white/70">
+            Clique em "Agendar" para abrir o formulário de horários.
+          </div>
         </div>
+
+        {openTimesModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="absolute inset-0 bg-black/60" onClick={() => setOpenTimesModal(false)} />
+            <div className="relative z-10 w-full max-w-3xl overflow-auto rounded-2xl p-4">
+              <div className="rounded-2xl border border-white/10 bg-black p-6">
+                <div className="mb-4">
+                  <h4 className="text-lg font-semibold">Escolha um horário</h4>
+                  <p className="text-sm text-white/70">
+                    Disponibilidade para{" "}
+                    {availability ? formatDate(availability.date) : formatDate(selectedDate)}
+                  </p>
+                </div>
+
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    await confirmSubmit();
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                    {times.length === 0 ? (
+                      <span className="col-span-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white/70">
+                        Não há horários disponíveis para esta data.
+                      </span>
+                    ) : (
+                      times.map((time) => (
+                        <label key={time} className="cursor-pointer">
+                          <input
+                            type="radio"
+                            name="time"
+                            value={time}
+                            checked={selectedTime === time}
+                            onChange={() => setSelectedTime(time)}
+                            className="sr-only"
+                          />
+                          <div
+                            className={`flex items-center justify-center rounded-2xl border px-3 py-2 text-sm transition ${
+                              selectedTime === time
+                                ? "border-[#f2c95a] bg-[#f2c95a] text-black"
+                                : "border-white/10 bg-black/40 text-white/80 hover:border-[#f2c95a]/50"
+                            }`}
+                          >
+                            {time}
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="mt-2 flex gap-3">
+                    <button
+                      type="button"
+                      className="flex-1 rounded-full border border-white/10 px-6 py-3 text-sm text-white/80"
+                      onClick={() => setOpenTimesModal(false)}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading || !selectedTime}
+                      className="flex-1 rounded-full bg-[#f2c95a] px-6 py-3 text-sm font-semibold text-black disabled:opacity-60"
+                    >
+                      {loading ? "Confirmando..." : "Confirmar agendamento"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-white/70">
           <p className="font-semibold text-white">Resumo do agendamento</p>
           <div className="mt-3 space-y-2">
             <p>
               <span className="text-white/50">Serviço:</span>{" "}
-              {availability?.services.find((service) => service.id === serviceId)
-                ?.name ?? "Selecione"}
+              {availability?.services.find((s) => s.id === serviceId)?.name ?? "Selecione"}
             </p>
             <p>
               <span className="text-white/50">Barbeiro:</span>{" "}
-              {availability?.barbers.find((barber) => barber.id === barberId)
-                ?.name ?? "Selecione"}
+              {availability?.barbers.find((b) => b.id === barberId)?.name ?? "Selecione"}
             </p>
             <p>
               <span className="text-white/50">Data:</span>{" "}
               {selectedDate ? formatDate(selectedDate) : "Selecione"}
             </p>
             <p>
-              <span className="text-white/50">Horário:</span>{" "}
-              {selectedTime || "Selecione"}
+              <span className="text-white/50">Horário:</span> {selectedTime || "Selecione"}
             </p>
           </div>
         </div>

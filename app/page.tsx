@@ -1,50 +1,10 @@
+import AppointmentScheduler from "./components/AppointmentScheduler";
+import HeaderWithScheduler from "./components/HeaderWithScheduler";
 export default function Home() {
   const whatsappLink = "https://wa.me/5534992892310";
   return (
     <div className="min-h-screen bg-[#0c0c0c] text-white">
-      <header className="border-b border-white/10 bg-[#0c0c0c]/90 backdrop-blur">
-         <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#c9a44a] text-[#c9a44a]">
-              <img
-              src="/europa-logo.jpg"
-              alt="Logo Barbearia Europa"
-              className="h-11 w-11"
-            />
-            </div>
-            <div>
-              <p className="text-sm uppercase tracking-[0.32em] text-white/60">
-                Barbearia
-              </p>
-              <p className="text-xl font-semibold">Europa</p>
-            </div>
-          </div>
-          <nav className="hidden items-center gap-8 text-sm font-medium text-white/70 md:flex">
-            <a className="transition hover:text-[#f2c95a]" href="#servicos">
-              Serviços
-            </a>
-            <a className="transition hover:text-[#f2c95a]" href="#estilo">
-              Estilo
-            </a>
-            <a className="transition hover:text-[#f2c95a]" href="#portfolio">
-              Portfólio
-            </a>
-            <a className="transition hover:text-[#f2c95a]" href="#agenda">
-              Agenda
-            </a>
-            <a className="transition hover:text-[#f2c95a]" href="#contato">
-              Contato
-            </a>
-          </nav>
-          <a
-            className="w-full rounded-full border border-[#f2c95a] px-5 py-2 text-center text-sm font-semibold text-[#f2c95a] transition hover:bg-[#f2c95a] hover:text-black sm:w-auto"
-            href={whatsappLink}
-          >
-             Agendar agora
-          </a>
-        </div>
-      </header>
+      <HeaderWithScheduler whatsappLink={whatsappLink} />
 
       <main>
         <section className="relative overflow-hidden bg-[#0c0c0c]">
@@ -244,59 +204,19 @@ export default function Home() {
 
         <section id="agenda" className="bg-[#0f0f0f] py-20">
            <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-            <div className="grid gap-10 md:grid-cols-[1.1fr_0.9fr]">
-              <div className="space-y-6">
-                <p className="text-sm uppercase tracking-[0.4em] text-white/50">
-                  Agenda
-                </p>
-                <h2 className="text-3xl font-semibold md:text-4xl">
-                  Horários flexíveis para sua rotina.
-                </h2>
-                <p className="text-base leading-7 text-white/70">
-                  Reserve com antecedência ou encaixe-se no mesmo dia. Nossa
-                  equipe está pronta para atender você com pontualidade.
-                </p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {["Seg - Sex", "Sábado"].map((label) => (
-                    <div
-                      key={label}
-                      className="rounded-2xl border border-white/10 bg-[#111111] px-5 py-4"
-                    >
-                      <p className="text-sm font-semibold text-white">{label}</p>
-                      <p className="text-sm text-white/60">09:00 - 20:00</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-[28px] border border-white/10 bg-[#111111] p-8">
-                <p className="text-sm uppercase tracking-[0.3em] text-white/50">
-                  Reserva rápida
-                </p>
-                <h3 className="mt-5 text-2xl font-semibold text-white">
-                  Garanta seu horário
-                </h3>
-                <div className="mt-6 space-y-4 text-sm text-white/70">
-                  <div className="flex items-center justify-between">
-                    <span>Atendimento express</span>
-                    <span className="text-[#f2c95a]">30 min</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Combo corte + barba</span>
-                    <span className="text-[#f2c95a]">60 min</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Pacote premium</span>
-                    <span className="text-[#f2c95a]">90 min</span>
-                  </div>
-                </div>
-                 <a
-                  className="mt-8 w-full rounded-full bg-[#f2c95a] px-6 py-3 text-center text-sm font-semibold text-black transition hover:bg-[#e1b84b]"
-                  href={whatsappLink}
-                >
-                  Agendar pelo WhatsApp
-                </a>
-              </div>
-            </div>
+            <div className="mb-12 space-y-4 text-center">
+              <p className="text-sm uppercase tracking-[0.4em] text-white/50">
+                Agendamento
+              </p>
+              <h2 className="text-3xl font-semibold md:text-4xl">
+                Seu horário garantido com poucos cliques
+              </h2>
+              <p className="text-base text-white/70">
+                Escolha o serviço, o barbeiro e o horário ideal. Confirmação
+                imediata para você se organizar com tranquilidade.
+              </p>
+             </div>
+            <AppointmentScheduler />
           </div>
         </section>
 
